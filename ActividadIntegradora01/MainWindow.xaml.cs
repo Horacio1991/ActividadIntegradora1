@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,25 +16,30 @@ using System.Windows.Shapes;
 
 namespace ActividadIntegradora01
 {
-    /// <summary>
-    /// Lógica de interacción para MainWindow.xaml
-    /// </summary>
+   
     public partial class MainWindow : Window
     {
+        // Lista donde se van a guardar las Personas
         private List<Persona> listaDePersonas = new List<Persona>();
+
+        // Archivo para la persistencia de datos
+        private string archivoDatos = "datos.txt";
+     
         public MainWindow()
         {
-            listaDePersonas.Add(new Persona("36084790", "Horacio", "Ortiz"));
-            listaDePersonas.Add(new Persona("36168344", "Belen", "Uronich"));
-            listaDePersonas.Add(new Persona("53815805", "Charo", "Ortiz"));
-            listaDePersonas.Add(new Persona("33132843", "Yamila", "Uronich"));
-            listaDePersonas.Add(new Persona("33453123", "Maxi", "Trabado"));
-            listaDePersonas.Add(new Persona("50.123.321", "Zoe", "Freancia"));
-
-
 
             InitializeComponent();
+            CargarDatosDesdeArchivo();
             LlenarDataGridConLista();
+
+            //Al presionar escape se limpiaran los campos del formulario
+            this.KeyDown += Window_KeyDown;
+
+        }
+
+        private void MainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private void LlenarDataGridConLista()
@@ -42,6 +48,52 @@ namespace ActividadIntegradora01
             dgPersonas.ItemsSource = listaDePersonas;
         }
 
+        private void CargarDatosDesdeArchivo()
+        {
+            if (File.Exists(archivoDatos))
+            {
+                try
+                {
+                    using (StreamReader sr = new StreamReader(archivoDatos))
+                    {
+                        string linea;
+                        while ((linea = sr.ReadLine()) != null)
+                        {
+                            string[] partes = linea.Split(',');
+                            if (partes.Length == 3)
+                            {
+                                listaDePersonas.Add(new Persona(partes[0], partes[1], partes[2]));
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al cargar datos desde el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+           
+        }
+
+        private void GuardarDatosEnArchivo()
+        {
+            try
+            {
+                using (StreamWriter sw = new StreamWriter(archivoDatos))
+                {
+                    foreach (Persona persona in listaDePersonas)
+                    {
+                        sw.WriteLine($"{persona.DNI},{persona.Nombre},{persona.Apellido}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al guardar datos en el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+
         private void LimpiarFormulario()
         {
             txtDNI.Clear();
@@ -49,6 +101,7 @@ namespace ActividadIntegradora01
             txtApellido.Clear();
         }
 
+        //Boton Agregar
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             // Verificar si todos los campos están completos
@@ -79,35 +132,39 @@ namespace ActividadIntegradora01
                 return;
             }
 
-            // Crear una nueva persona con los datos del formulario
+            // Se instancia la clase persona con los datos ingresados en el formulario
             Persona nuevaPersona = new Persona(txtDNI.Text, txtNombre.Text, txtApellido.Text);
 
             // Agregar la persona al DataGrid y a la lista
-            
             listaDePersonas.Add(nuevaPersona);
+            // Carga la grilla con los datos de la lista listaDePersonas
             dgPersonas.ItemsSource = listaDePersonas;
+            // Actualiza los items para mostrarlos en pantalla
             dgPersonas.Items.Refresh();
+           
+            GuardarDatosEnArchivo();
 
-
-
-
-            // Limpiar los campos de texto del formulario
             LimpiarFormulario();
         }
 
+        //Boton Buscar
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            // Obtener el DNI ingresado en el campo txtDNI
+            // Obtener el DNI ingresado 
             string dniABuscar = txtDNI.Text;
 
             // Crear una nueva instancia de Persona con el DNI ingresado
             Persona personaABuscar = new Persona(dniABuscar, "", "");
 
-            // Verificar si se encuentra la persona en el DataGrid
+            // Verificar si se encuentra la persona en la grilla
             if (personaABuscar.BuscarEnGrilla(dgPersonas))
             {
-                // Obtener la persona encontrada en el DataGrid
+                // Obtener la persona encontrada en la grilla
                 Persona personaEncontrada = dgPersonas.Items.Cast<Persona>().FirstOrDefault(persona => persona.DNI == dniABuscar);
+
+                // Llenar los campos nombre y apellido de la persona encontrada
+                txtNombre.Text = personaEncontrada.Nombre;
+                txtApellido.Text = personaEncontrada.Apellido;
 
                 // Mostrar un MessageBox con los detalles de la persona encontrada
                 MessageBox.Show($"DNI: {personaEncontrada.DNI}\nNombre: {personaEncontrada.Nombre}\nApellido: {personaEncontrada.Apellido}",
@@ -119,6 +176,17 @@ namespace ActividadIntegradora01
                 MessageBox.Show("No se encontró la persona con el DNI proporcionado.", "Búsqueda", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
+        }
+
+        // limpiar el fornulario con la tecla escape
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Verificar si se presionó la tecla Escape
+            if (e.Key == Key.Escape)
+            {
+                // Limpiar los campos de texto
+                LimpiarFormulario();
+            }
         }
     }
 }
